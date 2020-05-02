@@ -10,12 +10,13 @@ use getopts::Options;
 use std::env;
 
 use imk::command::Command;
+use imk::file_walker::Walker;
 use imk::fswatch::Watcher;
 
 fn print_usage(program: &str, opts: Options) {
-    let brief = format!("Usage: {} -c <cmd> -t <threshold> <files>", program);
+    let brief = format!("Usage: {} -c <cmd> [-r] [-t <threshold>] <files>", program);
     let note = "Please use quotes around the command if it is composed of multiple words";
-    print!("{}\n\n{}\n", opts.usage(&brief), note);
+    print!("{}\n{}\n\n", opts.usage(&brief), note);
 }
 
 fn main() {
@@ -35,6 +36,12 @@ fn main() {
         "threshold",
         "number of seconds to skip after the last executed command (default: 0)",
         "<THRESHOLD>",
+    );
+
+    opts.optflag(
+        "r",
+        "recurse",
+        "if a directory is supplied, add all its sub-directories as well",
     );
 
     opts.optflag("h", "help", "display this help text and exit");
@@ -67,11 +74,21 @@ fn main() {
     };
 
     let files = if !matches.free.is_empty() {
-        matches.free
+        matches.free.clone()
     } else {
         eprintln!("files/directories must be specified");
         return;
     };
 
-    Watcher::new(command, threshold, &files).inotify_dispatch();
+    if matches.opt_present("r") {
+        let mut walker = Walker::new();
+        match walker.process(&files) {
+            Ok(recursed) => {
+                Watcher::new(command, threshold, &recursed).inotify_dispatch();
+            }
+            Err(err) => eprintln!("Error: {}", err),
+        }
+    } else {
+        Watcher::new(command, threshold, &files).inotify_dispatch();
+    }
 }
