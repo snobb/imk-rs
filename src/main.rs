@@ -14,7 +14,10 @@ use imk::file_walker::Walker;
 use imk::fswatch::Watcher;
 
 fn print_usage(program: &str, opts: Options) {
-    let brief = format!("Usage: {} -c <cmd> [-r] [-t <threshold>] <files>", program);
+    let brief = format!(
+        "Usage: {} -c <cmd> [-r] [-k <kill-timeout>] [-t <threshold>] <files>",
+        program
+    );
     let note = "Please use quotes around the command if it is composed of multiple words";
     print!("{}\n{}\n\n", opts.usage(&brief), note);
 }
@@ -24,7 +27,7 @@ fn main() {
     let program = args[0].clone();
 
     let mut opts = Options::new();
-    opts.optopt(
+    opts.reqopt(
         "c",
         "command",
         "command to execute when file is modified",
@@ -38,6 +41,13 @@ fn main() {
         "<THRESHOLD>",
     );
 
+    opts.optopt(
+        "k",
+        "kill-timeout",
+        "kill the command after timeout (default: 0ms)",
+        "<KILL-TIMEOUT>",
+    );
+
     opts.optflag(
         "r",
         "recurse",
@@ -49,7 +59,8 @@ fn main() {
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
         Err(f) => {
-            eprintln!("{}", f.to_string());
+            print_usage(&program, opts);
+            eprintln!("{}\n", f.to_string());
             return;
         }
     };
@@ -59,13 +70,16 @@ fn main() {
         return;
     }
 
-    let command: Command = if matches.opt_present("c") {
-        let cmd = matches.opt_str("c").unwrap();
-        Command::new(cmd)
+    let kill_timeout = if matches.opt_present("k") {
+        match matches.opt_str("k").unwrap().parse::<u64>() {
+            Ok(v) => Some(v),
+            Err(_) => None,
+        }
     } else {
-        eprintln!("command must be specified");
-        return;
+        None
     };
+
+    let command = Command::new(matches.opt_str("c").unwrap(), kill_timeout);
 
     let threshold = if matches.opt_present("t") {
         matches.opt_str("t").unwrap().parse::<u64>().unwrap_or(0)
@@ -74,21 +88,21 @@ fn main() {
     };
 
     let files = if !matches.free.is_empty() {
-        matches.free.clone()
+        &matches.free
     } else {
         eprintln!("files/directories must be specified");
         return;
     };
 
     if matches.opt_present("r") {
-        let mut walker = Walker::new();
-        match walker.process(&files) {
+        match Walker::new().process(files) {
             Ok(recursed) => {
                 Watcher::new(command, threshold, &recursed).inotify_dispatch();
             }
+
             Err(err) => eprintln!("Error: {}", err),
         }
     } else {
-        Watcher::new(command, threshold, &files).inotify_dispatch();
+        Watcher::new(command, threshold, files).inotify_dispatch();
     }
 }

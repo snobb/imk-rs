@@ -50,7 +50,7 @@ impl<'a> Watcher<'a> {
         let mut wd_store: HashMap<WatchDescriptor, String> = HashMap::new();
 
         println!(
-            ":: [{}] start monitoring: command[{}], threshold[{}], files{:?}",
+            ":: [{}] start monitoring: {}, threshold[{}], files{:?}",
             get_time(),
             self.command,
             self.threshold.as_secs(),
