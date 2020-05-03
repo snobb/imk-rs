@@ -29,7 +29,7 @@ impl Command {
         }
     }
 
-    pub fn run_command(&self) -> process::ExitStatus {
+    pub fn run(&self) -> process::ExitStatus {
         let mut child = process::Command::new("/bin/sh")
             .arg("-c")
             .arg(&self.command)

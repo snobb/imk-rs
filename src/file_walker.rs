@@ -34,10 +34,11 @@ impl Walker {
     pub fn process(&mut self, files: &[String]) -> io::Result<&Vec<String>> {
         for (_, file) in files.iter().enumerate() {
             let path = Path::new(file);
+
+            self.enriched.push(file.clone());
+
             if path.is_dir() {
                 self.walk(Path::new(file))?
-            } else {
-                self.enriched.push(file.clone())
             }
         }
 

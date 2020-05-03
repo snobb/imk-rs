@@ -46,7 +46,7 @@ impl<'a> Watcher<'a> {
         }
     }
 
-    pub fn inotify_dispatch(&mut self) {
+    pub fn dispatch(&mut self) {
         let mut wd_store: HashMap<WatchDescriptor, String> = HashMap::new();
 
         println!(
@@ -85,7 +85,7 @@ impl<'a> Watcher<'a> {
                     && last.elapsed() >= self.threshold
                 {
                     println!(":: [{}] ======== {} =======", get_time(), file_name);
-                    let status = self.command.run_command();
+                    let status = self.command.run();
 
                     match status.code() {
                         Some(code) => println!(

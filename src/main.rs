@@ -97,12 +97,12 @@ fn main() {
     if matches.opt_present("r") {
         match Walker::new().process(files) {
             Ok(recursed) => {
-                Watcher::new(command, threshold, &recursed).inotify_dispatch();
+                Watcher::new(command, threshold, &recursed).dispatch();
             }
 
             Err(err) => eprintln!("Error: {}", err),
         }
     } else {
-        Watcher::new(command, threshold, files).inotify_dispatch();
+        Watcher::new(command, threshold, files).dispatch();
     }
 }
