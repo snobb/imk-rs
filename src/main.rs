@@ -15,7 +15,7 @@ use imk::fswatch::Watcher;
 
 fn print_usage(program: &str, opts: Options) {
     let brief = format!(
-        "Usage: {} -c <cmd> [-r] [-k <kill-timeout>] [-t <threshold>] <files>",
+        "Usage: {} -c <cmd> [-r] [-s] [-k <kill-timeout>] [-t <threshold>] <files>",
         program
     );
     let note = "Please use quotes around the command if it is composed of multiple words";
@@ -54,6 +54,12 @@ fn main() {
         "if a directory is supplied, add all its sub-directories as well",
     );
 
+    opts.optflag(
+        "s",
+        "wrap-shell",
+        "run the provided command in a shell. Eg. /bin/sh -c <command>.",
+    );
+
     opts.optflag("h", "help", "display this help text and exit");
 
     let matches = match opts.parse(&args[1..]) {
@@ -79,7 +85,9 @@ fn main() {
         None
     };
 
-    let command = Command::new(matches.opt_str("c").unwrap(), kill_timeout);
+    let wrap_shell = matches.opt_present("s");
+
+    let command = Command::new(matches.opt_str("c").unwrap(), wrap_shell, kill_timeout);
 
     let threshold = if matches.opt_present("t") {
         matches.opt_str("t").unwrap().parse::<u64>().unwrap_or(0)
