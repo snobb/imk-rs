@@ -3,6 +3,7 @@
  */
 
 use std::collections::HashMap;
+use std::io::{stdout, Write};
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
@@ -100,6 +101,8 @@ impl<'a> Watcher<'a> {
                             file_name
                         ),
                     }
+
+                    stdout().flush().unwrap();
 
                     last = Instant::now();
                 }

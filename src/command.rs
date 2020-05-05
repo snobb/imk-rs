@@ -64,13 +64,13 @@ fn wait_timeout(child: &mut process::Child, timeout_ms: time::Duration) -> proce
             Ok(None) => {
                 // still running - check for timeout_ms
                 if Instant::now().duration_since(start) > timeout_ms {
-                    child.kill().expect("unable to kill process");
+                    child.kill().expect("unable to kill process")
                 }
             }
 
             Err(e) => {
                 eprintln!("error: {}", e);
-                child.kill().expect("unable to kill process");
+                child.kill().expect("unable to kill process")
             }
         }
 
