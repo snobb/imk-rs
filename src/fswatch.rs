@@ -85,21 +85,20 @@ impl<'a> Watcher<'a> {
                     || event.mask.contains(EventMask::MODIFY))
                     && last.elapsed() >= self.threshold
                 {
-                    println!(":: [{}] ======== {} =======", get_time(), file_name);
+                    println!(":: [{}] ===== {} =====", get_time(), file_name);
                     let status = self.command.run();
 
                     match status.code() {
                         Some(code) => println!(
-                            ":: [{}] ======= {} [exit code {}] =======",
+                            ":: [{}] ===== {} [exit code {}] =====",
                             get_time(),
                             file_name,
                             code
                         ),
-                        None => println!(
-                            ":: [{}] ======= {} [terminated] =======",
-                            get_time(),
-                            file_name
-                        ),
+
+                        None => {
+                            println!(":: [{}] ===== {} [terminated] =====", get_time(), file_name)
+                        }
                     }
 
                     stdout().flush().unwrap();

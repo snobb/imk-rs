@@ -10,23 +10,33 @@ use std::{thread, time};
 pub struct Command {
     pub command: String,
     wrap_shell: bool,
+    once: bool,
     timeout_ms: Option<u64>,
 }
 
 impl Display for Command {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.timeout_ms {
-            Some(v) => write!(f, "command[{}], timeout_ms[{}]", self.command, v),
-            None => write!(f, "command[{}]", self.command),
+            Some(v) => write!(
+                f,
+                "command[{}], wrap-shell[{}], timeout_ms[{}]",
+                self.command, self.wrap_shell, v
+            ),
+            None => write!(
+                f,
+                "command[{}], wrap-shell[{}]",
+                self.command, self.wrap_shell
+            ),
         }
     }
 }
 
 impl Command {
-    pub fn new(command: String, wrap_shell: bool, timeout_ms: Option<u64>) -> Self {
+    pub fn new(command: String, wrap_shell: bool, once: bool, timeout_ms: Option<u64>) -> Self {
         Command {
             command,
             wrap_shell,
+            once,
             timeout_ms,
         }
     }
@@ -46,11 +56,17 @@ impl Command {
                 .expect("failed to start the comman")
         };
 
+        let status: process::ExitStatus;
         if let Some(timeout_ms) = self.timeout_ms {
-            wait_timeout(&mut child, time::Duration::from_millis(timeout_ms))
+            status = wait_timeout(&mut child, time::Duration::from_millis(timeout_ms));
         } else {
-            // no timeout_ms - wait infinitely
-            child.wait().expect("unable to wait for process")
+            status = child.wait().expect("unable to wait for process");
+        }
+
+        if self.once {
+            process::exit(status.code().unwrap());
+        } else {
+            status
         }
     }
 }
