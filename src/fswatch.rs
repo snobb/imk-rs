@@ -10,7 +10,6 @@ use std::time::{Duration, Instant};
 use inotify::{EventMask, Inotify, WatchDescriptor, WatchMask};
 
 use command::Command;
-use log::get_time;
 
 pub struct Watcher<'a> {
     inotify: Inotify,
@@ -37,24 +36,18 @@ impl<'a> Watcher<'a> {
                 wd_store.insert(wd, file.to_string());
             }
 
-            Err(e) => eprintln!(
-                "!! [{}] error: failed to add file watch for {}: {}",
-                file,
-                get_time(),
-                e
-            ),
+            Err(e) => ::log_error!("error: failed to add file watch for {}: {}", file, e),
         }
     }
 
     pub fn dispatch(&mut self) {
         let mut wd_store: HashMap<WatchDescriptor, String> = HashMap::new();
 
-        println!(
-            ":: [{}] start monitoring: {}, threshold[{}], files{:?}",
-            get_time(),
+        ::log_info!(
+            "start monitoring: {}, threshold[{}], files{:?}",
             self.command,
             self.threshold.as_secs(),
-            self.files
+            self.files,
         );
 
         for file in self.files {
@@ -84,22 +77,15 @@ impl<'a> Watcher<'a> {
                     || event.mask.contains(EventMask::MODIFY))
                     && last.elapsed() >= self.threshold
                 {
-                    println!(":: [{}] ===== {} =====", get_time(), file_name);
+                    ::log_info!("===== {} =====", file_name);
                     match self.command.run() {
                         Ok(status) => {
                             match status.code() {
-                                Some(code) => println!(
-                                    ":: [{}] ===== {} [exit code {}] =====",
-                                    get_time(),
-                                    file_name,
-                                    code
-                                ),
+                                Some(code) => {
+                                    ::log_info!("===== {} [exit code {}] =====", file_name, code)
+                                }
 
-                                None => println!(
-                                    ":: [{}] ===== {} [terminated] =====",
-                                    get_time(),
-                                    file_name
-                                ),
+                                None => ::log_info!("===== {} [terminated] =====", file_name),
                             }
 
                             stdout().flush().unwrap();
@@ -107,11 +93,7 @@ impl<'a> Watcher<'a> {
                             last = Instant::now();
                         }
 
-                        Err(e) => eprintln!(
-                            "!! [{}] error: failed to run the command: {}",
-                            get_time(),
-                            e
-                        ),
+                        Err(e) => ::log_error!("error: failed to run the command: {}", e),
                     }
                 }
 

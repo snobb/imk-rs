@@ -12,7 +12,6 @@ use std::env;
 use imk::command::Command;
 use imk::file_walker::Walker;
 use imk::fswatch::Watcher;
-use imk::log::get_time;
 
 fn print_usage(program: &str, opts: Options) {
     let brief = format!(
@@ -68,7 +67,7 @@ fn main() {
         Ok(m) => m,
         Err(e) => {
             print_usage(&program, opts);
-            eprintln!("!! [{}] error: {}\n", get_time(), e);
+            eprintln!("error: {}\n", e);
             return;
         }
     };
@@ -106,10 +105,7 @@ fn main() {
     let files = if !matches.free.is_empty() {
         &matches.free
     } else {
-        eprintln!(
-            "!! [{}] error: files/directories must be specified",
-            get_time()
-        );
+        eprintln!("error: files/directories must be specified",);
         return;
     };
 
@@ -119,7 +115,7 @@ fn main() {
                 Watcher::new(command, threshold, &recursed).dispatch();
             }
 
-            Err(e) => eprintln!("!! [{}] error: {}", get_time(), e),
+            Err(e) => eprintln!("error: could not recurse: {}", e),
         }
     } else {
         Watcher::new(command, threshold, files).dispatch();

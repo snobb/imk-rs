@@ -8,8 +8,6 @@ use std::process;
 use std::time::Instant;
 use std::{thread, time};
 
-use log::get_time;
-
 pub struct Command {
     pub command: String,
     wrap_shell: bool,
@@ -84,7 +82,7 @@ fn wait_timeout(child: &mut process::Child, timeout_ms: time::Duration) -> proce
             }
 
             Err(e) => {
-                eprintln!("!! [{}] error: {}", get_time(), e);
+                ::log_error!("error: {}", e);
                 child.kill().expect("unable to kill process")
             }
         }
