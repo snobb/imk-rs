@@ -12,6 +12,7 @@ use std::env;
 use imk::command::Command;
 use imk::file_walker::Walker;
 use imk::fswatch::Watcher;
+use imk::log::get_time;
 
 fn print_usage(program: &str, opts: Options) {
     let brief = format!(
@@ -19,7 +20,7 @@ fn print_usage(program: &str, opts: Options) {
         program
     );
     let note = "Please use quotes around the command if it is composed of multiple words";
-    print!("{}\n{}\n\n", opts.usage(&brief), note);
+    println!("{}\n{}\n", opts.usage(&brief), note);
 }
 
 fn main() {
@@ -65,9 +66,9 @@ fn main() {
 
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
-        Err(f) => {
+        Err(e) => {
             print_usage(&program, opts);
-            eprintln!("{}\n", f.to_string());
+            eprintln!("!! [{}] error: {}\n", get_time(), e);
             return;
         }
     };
@@ -105,7 +106,10 @@ fn main() {
     let files = if !matches.free.is_empty() {
         &matches.free
     } else {
-        eprintln!("files/directories must be specified");
+        eprintln!(
+            "!! [{}] error: files/directories must be specified",
+            get_time()
+        );
         return;
     };
 
@@ -115,7 +119,7 @@ fn main() {
                 Watcher::new(command, threshold, &recursed).dispatch();
             }
 
-            Err(err) => eprintln!("Error: {}", err),
+            Err(e) => eprintln!("!! [{}] error: {}", get_time(), e),
         }
     } else {
         Watcher::new(command, threshold, files).dispatch();

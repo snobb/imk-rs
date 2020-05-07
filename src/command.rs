@@ -3,9 +3,12 @@
  */
 
 use std::fmt::{self, Display};
+use std::io;
 use std::process;
 use std::time::Instant;
 use std::{thread, time};
+
+use log::get_time;
 
 pub struct Command {
     pub command: String,
@@ -41,20 +44,16 @@ impl Command {
         }
     }
 
-    pub fn run(&self) -> process::ExitStatus {
+    pub fn run(&self) -> io::Result<process::ExitStatus> {
         let mut child = if self.wrap_shell {
             process::Command::new("/bin/sh")
                 .arg("-c")
                 .arg(&self.command)
                 .spawn()
-                .expect("failed to start the comman")
         } else {
             let cmd: Vec<&str> = self.command.split_whitespace().collect();
-            process::Command::new(cmd[0])
-                .args(&cmd[1..])
-                .spawn()
-                .expect("failed to start the comman")
-        };
+            process::Command::new(cmd[0]).args(&cmd[1..]).spawn()
+        }?;
 
         let status: process::ExitStatus;
         if let Some(timeout_ms) = self.timeout_ms {
@@ -66,7 +65,7 @@ impl Command {
         if self.once {
             process::exit(status.code().unwrap());
         } else {
-            status
+            Ok(status)
         }
     }
 }
@@ -85,7 +84,7 @@ fn wait_timeout(child: &mut process::Child, timeout_ms: time::Duration) -> proce
             }
 
             Err(e) => {
-                eprintln!("error: {}", e);
+                eprintln!("!! [{}] error: {}", get_time(), e);
                 child.kill().expect("unable to kill process")
             }
         }

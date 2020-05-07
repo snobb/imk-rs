@@ -8,3 +8,4 @@ extern crate inotify;
 pub mod command;
 pub mod file_walker;
 pub mod fswatch;
+pub mod log;

@@ -7,10 +7,10 @@ use std::io::{stdout, Write};
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
-use chrono::prelude::Local;
 use inotify::{EventMask, Inotify, WatchDescriptor, WatchMask};
 
 use command::Command;
+use log::get_time;
 
 pub struct Watcher<'a> {
     inotify: Inotify,
@@ -37,13 +37,12 @@ impl<'a> Watcher<'a> {
                 wd_store.insert(wd, file.to_string());
             }
 
-            Err(e) => {
-                eprintln!(
-                    "Could not add inotify watch for {}: {}",
-                    file,
-                    e.to_string()
-                );
-            }
+            Err(e) => eprintln!(
+                "!! [{}] error: failed to add file watch for {}: {}",
+                file,
+                get_time(),
+                e
+            ),
         }
     }
 
@@ -86,32 +85,38 @@ impl<'a> Watcher<'a> {
                     && last.elapsed() >= self.threshold
                 {
                     println!(":: [{}] ===== {} =====", get_time(), file_name);
-                    let status = self.command.run();
+                    match self.command.run() {
+                        Ok(status) => {
+                            match status.code() {
+                                Some(code) => println!(
+                                    ":: [{}] ===== {} [exit code {}] =====",
+                                    get_time(),
+                                    file_name,
+                                    code
+                                ),
 
-                    match status.code() {
-                        Some(code) => println!(
-                            ":: [{}] ===== {} [exit code {}] =====",
-                            get_time(),
-                            file_name,
-                            code
-                        ),
+                                None => println!(
+                                    ":: [{}] ===== {} [terminated] =====",
+                                    get_time(),
+                                    file_name
+                                ),
+                            }
 
-                        None => {
-                            println!(":: [{}] ===== {} [terminated] =====", get_time(), file_name)
+                            stdout().flush().unwrap();
+
+                            last = Instant::now();
                         }
+
+                        Err(e) => eprintln!(
+                            "!! [{}] error: failed to run the command: {}",
+                            get_time(),
+                            e
+                        ),
                     }
-
-                    stdout().flush().unwrap();
-
-                    last = Instant::now();
                 }
 
                 self.add_watch(&file_name, &mut wd_store);
             }
         }
     }
-}
-
-fn get_time() -> String {
-    Local::now().format("%H:%M:%S").to_string()
 }
