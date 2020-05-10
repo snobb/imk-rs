@@ -8,6 +8,7 @@ extern crate getopts;
 
 use getopts::Options;
 use std::env;
+use std::time;
 
 use imk::command::Command;
 use imk::file_walker::Walker;
@@ -15,7 +16,7 @@ use imk::fswatch::Watcher;
 
 fn print_usage(program: &str, opts: Options) {
     let brief = format!(
-        "Usage: {} -c <cmd> [-r] [-s] [-o] [-k <kill-timeout>] [-t <threshold>] <files>",
+        "Usage: {} -c <cmd> [-d <cmd>] [-h] [-k <kill-timeout>] [-o] [-r] [-s] [-t <threshold>] <files>",
         program
     );
     let note = "Please use quotes around the command if it is composed of multiple words";
@@ -35,11 +36,13 @@ fn main() {
     );
 
     opts.optopt(
-        "t",
-        "threshold",
-        "number of seconds to skip after the last executed command (default: 0)",
-        "<THRESHOLD>",
+        "d",
+        "teardown",
+        "command to execute after the command process is killed (required -k)",
+        "<COMMAND>",
     );
+
+    opts.optflag("h", "help", "display this help text and exit");
 
     opts.optopt(
         "k",
@@ -47,6 +50,8 @@ fn main() {
         "kill the command after timeout (default: 0ms)",
         "<KILL-TIMEOUT>",
     );
+
+    opts.optflag("o", "once", "run command once and exit on event.");
 
     opts.optflag(
         "r",
@@ -60,8 +65,12 @@ fn main() {
         "run the provided command in a shell. Eg. /bin/sh -c <command>.",
     );
 
-    opts.optflag("o", "once", "run command once and exit on event.");
-    opts.optflag("h", "help", "display this help text and exit");
+    opts.optopt(
+        "t",
+        "threshold",
+        "number of seconds to skip after the last executed command (default: 0)",
+        "<THRESHOLD>",
+    );
 
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
@@ -79,7 +88,7 @@ fn main() {
 
     let kill_timeout = if matches.opt_present("k") {
         match matches.opt_str("k").unwrap().parse::<u64>() {
-            Ok(v) => Some(v),
+            Ok(v) => Some(time::Duration::from_millis(v)),
             Err(_) => None,
         }
     } else {
@@ -89,11 +98,18 @@ fn main() {
     let wrap_shell = matches.opt_present("s");
     let once = matches.opt_present("o");
 
+    let teardown = if matches.opt_present("d") {
+        Some(matches.opt_str("d").unwrap())
+    } else {
+        None
+    };
+
     let command = Command::new(
-        matches.opt_str("c").unwrap(),
         wrap_shell,
         once,
         kill_timeout,
+        matches.opt_str("c").unwrap(),
+        teardown,
     );
 
     let threshold = if matches.opt_present("t") {

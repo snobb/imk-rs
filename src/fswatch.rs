@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 
 use inotify::{EventMask, Inotify, WatchDescriptor, WatchMask};
 
-use command::Command;
+use command::{Command, CommandResult};
 
 pub struct Watcher<'a> {
     inotify: Inotify,
@@ -36,7 +36,7 @@ impl<'a> Watcher<'a> {
                 wd_store.insert(wd, file.to_string());
             }
 
-            Err(e) => ::log_error!("error: failed to add file watch for {}: {}", file, e),
+            Err(e) => ::log_error!("failed to add file watch for {}: {}", file, e),
         }
     }
 
@@ -44,7 +44,7 @@ impl<'a> Watcher<'a> {
         let mut wd_store: HashMap<WatchDescriptor, String> = HashMap::new();
 
         ::log_info!(
-            "start monitoring: {}, threshold[{}], files{:?}",
+            "start monitoring: {} threshold[{}] files{:?}",
             self.command,
             self.threshold.as_secs(),
             self.files,
@@ -79,22 +79,19 @@ impl<'a> Watcher<'a> {
                 {
                     ::log_info!("===== {} =====", file_name);
                     match self.command.run() {
-                        Ok(status) => {
-                            match status.code() {
-                                Some(code) => {
-                                    ::log_info!("===== {} [exit code {}] =====", file_name, code)
-                                }
-
-                                None => ::log_info!("===== {} [terminated] =====", file_name),
-                            }
-
-                            stdout().flush().unwrap();
-
-                            last = Instant::now();
+                        CommandResult::Status(code) => {
+                            ::log_info!("===== {} [exit code {}] =====", file_name, code)
                         }
 
-                        Err(e) => ::log_error!("error: failed to run the command: {}", e),
+                        CommandResult::Killed => {
+                            ::log_info!("===== {} [terminated] =====", file_name)
+                        }
+
+                        CommandResult::Error(e) => ::log_error!("failed to run the command: {}", e),
                     }
+
+                    stdout().flush().unwrap();
+                    last = Instant::now();
                 }
 
                 self.add_watch(&file_name, &mut wd_store);

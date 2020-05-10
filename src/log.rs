@@ -18,6 +18,6 @@ macro_rules! log_info {
 #[macro_export]
 macro_rules! log_error {
     ($fmt:expr, $($arg:tt)*) => ({
-        eprintln!("!! [{}] {}", ::log::get_time(), format_args!($fmt, $($arg)*));
+        eprintln!("!! [{}] error: {}", ::log::get_time(), format_args!($fmt, $($arg)*));
     })
 }
