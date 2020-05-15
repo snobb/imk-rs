@@ -8,12 +8,6 @@ use std::process;
 use std::time::Instant;
 use std::{thread, time};
 
-pub enum CommandResult<T, E> {
-    Killed,
-    Status(T),
-    Error(E),
-}
-
 pub struct Command {
     wrap_shell: bool,
     once: bool,
@@ -63,8 +57,8 @@ impl Command {
         }
     }
 
-    pub fn run(&self) -> CommandResult<i32, io::Error> {
-        let child_result = if self.wrap_shell {
+    pub fn run(&self) -> io::Result<Option<i32>> {
+        let mut child = if self.wrap_shell {
             process::Command::new("/bin/sh")
                 .arg("-c")
                 .arg(&self.command)
@@ -72,17 +66,12 @@ impl Command {
         } else {
             let cmd: Vec<&str> = self.command.split_whitespace().collect();
             process::Command::new(cmd[0]).args(&cmd[1..]).spawn()
-        };
-
-        let mut child = match child_result {
-            Ok(child) => child,
-            Err(e) => return CommandResult::Error(e),
-        };
+        }?;
 
         let status = self.wait_timeout(&mut child);
 
         if self.once {
-            if let CommandResult::Status(code) = status {
+            if let Ok(Some(code)) = status {
                 process::exit(code);
             } else {
                 process::exit(1);
@@ -92,17 +81,18 @@ impl Command {
         }
     }
 
-    fn wait_timeout(&self, child: &mut process::Child) -> CommandResult<i32, io::Error> {
+    fn wait_timeout(&self, child: &mut process::Child) -> io::Result<Option<i32>> {
         let start = Instant::now();
 
         loop {
             match child.try_wait() {
                 Ok(Some(status)) => match status.code() {
-                    Some(code) => return CommandResult::Status(code),
-                    None => return CommandResult::Killed,
+                    Some(code) => return Ok(Some(code)),
+                    None => return Ok(None),
                 },
 
                 Ok(None) => {
+                    // still running - check for timeout_ms
                     if let Some(timeout) = self.timeout_ms {
                         if Instant::now().duration_since(start) > timeout {
                             self.handle_timeout(child);
@@ -110,16 +100,14 @@ impl Command {
                     }
                 }
 
-                Err(e) => {
-                    return CommandResult::Error(e);
-                }
+                Err(e) => return Err(e),
             }
 
             thread::sleep(time::Duration::from_millis(100));
         }
     }
 
-    fn handle_timeout(&self, child: &mut process::Child) -> CommandResult<i32, io::Error> {
+    fn handle_timeout(&self, child: &mut process::Child) {
         // still running - check for timeout_ms
         if let Some(teardown) = &self.teardown {
             process::Command::new("/bin/sh")
@@ -127,13 +115,9 @@ impl Command {
                 .arg(&teardown)
                 .env("CMD_PID", child.id().to_string())
                 .status()
-                .expect("could not run the teardown command");
-            CommandResult::Killed
+                .ok();
         } else {
-            match child.kill() {
-                Ok(_) => CommandResult::Killed,
-                Err(e) => CommandResult::Error(e),
-            }
+            child.kill().ok();
         }
     }
 }

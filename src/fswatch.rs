@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 
 use inotify::{EventMask, Inotify, WatchDescriptor, WatchMask};
 
-use command::{Command, CommandResult};
+use command::Command;
 
 pub struct Watcher<'a> {
     inotify: Inotify,
@@ -79,15 +79,13 @@ impl<'a> Watcher<'a> {
                 {
                     ::log_info!("===== {} =====", file_name);
                     match self.command.run() {
-                        CommandResult::Status(code) => {
+                        Ok(Some(code)) => {
                             ::log_info!("===== {} [exit code {}] =====", file_name, code)
                         }
 
-                        CommandResult::Killed => {
-                            ::log_info!("===== {} [terminated] =====", file_name)
-                        }
+                        Ok(None) => ::log_info!("===== {} [terminated] =====", file_name),
 
-                        CommandResult::Error(e) => ::log_error!("failed to run the command: {}", e),
+                        Err(e) => ::log_error!("failed to run the command: {}", e),
                     }
 
                     stdout().flush().unwrap();
