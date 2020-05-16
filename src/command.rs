@@ -8,36 +8,13 @@ use std::process;
 use std::time::Instant;
 use std::{thread, time};
 
+#[derive(Default)]
 pub struct Command {
     wrap_shell: bool,
     once: bool,
     timeout_ms: Option<time::Duration>,
     command: String,
     teardown: Option<String>,
-}
-
-impl Display for Command {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut opts: Vec<String> = vec![format!("command[{}]", self.command)];
-
-        if let Some(timeout_ms) = self.timeout_ms {
-            if let Some(teardown) = &self.teardown {
-                opts.push(format!("teardown[{}]", teardown));
-            }
-
-            opts.push(format!("timeout_ms[{}]", timeout_ms.as_millis()));
-        }
-
-        if self.wrap_shell {
-            opts.push("wrap_shell".to_string());
-        }
-
-        if self.once {
-            opts.push("once".to_string());
-        }
-
-        write!(f, "{}", opts.join(" "))
-    }
 }
 
 impl Command {
@@ -119,5 +96,29 @@ impl Command {
         } else {
             child.kill().ok();
         }
+    }
+}
+
+impl Display for Command {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut opts: Vec<String> = vec![format!("command[{}]", self.command)];
+
+        if let Some(timeout_ms) = self.timeout_ms {
+            if let Some(teardown) = &self.teardown {
+                opts.push(format!("teardown[{}]", teardown));
+            }
+
+            opts.push(format!("timeout_ms[{}]", timeout_ms.as_millis()));
+        }
+
+        if self.wrap_shell {
+            opts.push("wrap_shell".to_string());
+        }
+
+        if self.once {
+            opts.push("once".to_string());
+        }
+
+        write!(f, "{}", opts.join(" "))
     }
 }

@@ -6,9 +6,8 @@ use std::fs;
 use std::io;
 use std::path::Path;
 
-#[derive(Default)]
-pub struct Walker {
-    enriched: Vec<String>,
+pub struct Walker<'a> {
+    enriched: &'a mut Vec<String>,
 }
 
 fn is_ignored(path: &str) -> bool {
@@ -24,14 +23,12 @@ fn is_ignored(path: &str) -> bool {
     false
 }
 
-impl Walker {
-    pub fn new() -> Self {
-        Walker {
-            enriched: Default::default(),
-        }
+impl<'a> Walker<'a> {
+    pub fn new(dest: &'a mut Vec<String>) -> Self {
+        Walker { enriched: dest }
     }
 
-    pub fn process(&mut self, files: &[String]) -> io::Result<&Vec<String>> {
+    pub fn process(&mut self, files: &[String]) -> io::Result<()> {
         for (_, file) in files.iter().enumerate() {
             let path = Path::new(file);
 
@@ -42,7 +39,7 @@ impl Walker {
             }
         }
 
-        Ok(&self.enriched)
+        Ok(())
     }
 
     fn walk(&mut self, path: &Path) -> io::Result<()> {

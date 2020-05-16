@@ -3,9 +3,11 @@
  */
 
 extern crate chrono;
+extern crate getopts;
 extern crate inotify;
 
 pub mod command;
-pub mod file_walker;
+pub mod config;
 pub mod fswatch;
 pub mod log;
+pub mod walker;

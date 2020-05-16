@@ -5,25 +5,21 @@
 use std::collections::HashMap;
 use std::io::{stdout, Write};
 use std::path::PathBuf;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 
 use inotify::{EventMask, Inotify, WatchDescriptor, WatchMask};
 
-use command::Command;
+use config::Config;
 
 pub struct Watcher<'a> {
+    config: &'a Config,
     inotify: Inotify,
-    command: Command,
-    threshold: Duration,
-    files: &'a [String],
 }
 
 impl<'a> Watcher<'a> {
-    pub fn new(command: Command, threshold: u64, files: &'a [String]) -> Self {
+    pub fn new(config: &'a Config) -> Self {
         Watcher {
-            threshold: Duration::from_secs(threshold),
-            command,
-            files,
+            config,
             inotify: Inotify::init().expect("Failed to initialize inotify"),
         }
     }
@@ -43,19 +39,14 @@ impl<'a> Watcher<'a> {
     pub fn dispatch(&mut self) {
         let mut wd_store: HashMap<WatchDescriptor, String> = HashMap::new();
 
-        ::log_info!(
-            "start monitoring: {} threshold[{}] files{:?}",
-            self.command,
-            self.threshold.as_secs(),
-            self.files,
-        );
+        ::log_info!("start monitoring: {}", self.config);
 
-        for file in self.files {
+        for file in self.config.files() {
             self.add_watch(&file, &mut wd_store);
         }
 
         let mut buffer = [0u8; 4096];
-        let mut last = Instant::now() - self.threshold;
+        let mut last = Instant::now() - self.config.threshold;
 
         loop {
             let events = self
@@ -75,10 +66,10 @@ impl<'a> Watcher<'a> {
 
                 if (event.mask.contains(EventMask::MOVE_SELF)
                     || event.mask.contains(EventMask::MODIFY))
-                    && last.elapsed() >= self.threshold
+                    && last.elapsed() >= self.config.threshold
                 {
                     ::log_info!("===== {} =====", file_name);
-                    match self.command.run() {
+                    match self.config.command().run() {
                         Ok(Some(code)) => {
                             ::log_info!("===== {} [exit code {}] =====", file_name, code)
                         }
