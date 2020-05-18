@@ -10,14 +10,22 @@ pub fn get_time() -> String {
 
 #[macro_export]
 macro_rules! log_info {
+    ($fmt:expr) => ({
+        println!("!! [{}] {}", ::log::get_time(), $fmt);
+    });
+
     ($fmt:expr, $($arg:tt)*) => ({
         println!(":: [{}] {}", ::log::get_time(), format_args!($fmt, $($arg)*));
-    })
+    });
 }
 
 #[macro_export]
 macro_rules! log_error {
+    ($fmt:expr) => ({
+        eprintln!("!! [{}] error: {}", ::log::get_time(), $fmt);
+    });
+
     ($fmt:expr, $($arg:tt)*) => ({
         eprintln!("!! [{}] error: {}", ::log::get_time(), format_args!($fmt, $($arg)*));
-    })
+    });
 }
