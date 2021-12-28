@@ -39,10 +39,15 @@ impl<'a> Watcher<'a> {
     pub fn dispatch(&mut self) {
         let mut wd_store: HashMap<WatchDescriptor, String> = HashMap::new();
 
+        if self.config.is_immediate() {
+            ::log_info!("run command immediately: {}", self.config);
+            self.run_command("immediate");
+        }
+
         ::log_info!("start monitoring: {}", self.config);
 
         for file in self.config.files() {
-            self.add_watch(&file, &mut wd_store);
+            self.add_watch(file, &mut wd_store);
         }
 
         let mut buffer = [0u8; 4096];
@@ -69,22 +74,26 @@ impl<'a> Watcher<'a> {
                     && last.elapsed() >= self.config.threshold
                 {
                     ::log_info!("===== {} =====", file_name);
-                    match self.config.command().run() {
-                        Ok(Some(code)) => {
-                            ::log_info!("===== {} [exit code {}] =====", file_name, code)
-                        }
-
-                        Ok(None) => ::log_info!("===== {} [terminated] =====", file_name),
-
-                        Err(e) => ::log_error!("failed to run the command: {}", e),
-                    }
-
-                    stdout().flush().unwrap();
+                    self.run_command(&file_name);
                     last = Instant::now();
                 }
 
                 self.add_watch(&file_name, &mut wd_store);
             }
         }
+    }
+
+    fn run_command(&self, file_name: &str) {
+        match self.config.command().run() {
+            Ok(Some(code)) => {
+                ::log_info!("===== {} [exit code {}] =====", file_name, code)
+            }
+
+            Ok(None) => ::log_info!("===== {} [terminated] =====", file_name),
+
+            Err(e) => ::log_error!("failed to run the command: {}", e),
+        }
+
+        stdout().flush().unwrap();
     }
 }

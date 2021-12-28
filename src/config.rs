@@ -15,6 +15,7 @@ use walker::Walker;
 pub struct Config {
     pub threshold: Duration,
     recurse: bool,
+    immediate: bool,
     command: Command,
     files: Vec<String>,
 }
@@ -50,6 +51,12 @@ impl Config {
         );
 
         opts.optflag("h", "help", "display this help text and exit");
+
+        opts.optflag(
+            "i",
+            "immediate",
+            "run the command immediately after startup",
+        );
 
         opts.optopt(
             "k",
@@ -89,7 +96,7 @@ impl Config {
         };
 
         if matches.opt_present("h") {
-            print_usage(&program, opts);
+            print_usage(program, opts);
             exit(0);
         }
 
@@ -127,6 +134,7 @@ impl Config {
         };
 
         let recurse = matches.opt_present("r");
+        let immediate = matches.opt_present("i");
 
         let files = if !matches.free.is_empty() {
             if recurse {
@@ -147,6 +155,7 @@ impl Config {
         Config {
             threshold,
             recurse,
+            immediate,
             command,
             files,
         }
@@ -154,6 +163,10 @@ impl Config {
 
     pub fn command(&self) -> &Command {
         &self.command
+    }
+
+    pub fn is_immediate(&self) -> bool {
+        self.immediate
     }
 
     pub fn files(&self) -> &Vec<String> {
