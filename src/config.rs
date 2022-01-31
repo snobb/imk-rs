@@ -21,10 +21,7 @@ pub struct Config {
 }
 
 fn print_usage(program: &str, opts: Options) {
-    let brief = format!(
-        "Usage: {} -c <cmd> [-d <cmd>] [-h] [-k <kill-timeout>] [-o] [-r] [-s] [-t <threshold>] <files>",
-        program
-    );
+    let brief = format!("Usage: {} [options] <files>", program);
 
     let note = "Please use quotes around the command if it is composed of multiple words";
     println!("{}\n{}\n", opts.usage(&brief), note);
